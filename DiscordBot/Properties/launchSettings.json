@@ -1,0 +1,14 @@
+{
+  "profiles": {
+    "DiscordBot": {
+      "commandName": "Project",
+      "environmentVariables": {
+        "discordweb": "https://localhost:44355/api/discord",
+        "token": "NzM2MjA0MDE1NjIwMDYzMjc0.XxrZaw.1ulR0-TPjXP19ZgMjE-errE7TzM"
+      }
+    },
+    "Docker": {
+      "commandName": "Docker"
+    }
+  }
+}

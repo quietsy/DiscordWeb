@@ -1,0 +1,119 @@
+﻿@page "/"
+
+@using Microsoft.AspNetCore.WebUtilities
+@using System.Web
+@inject DiscordDAL service
+@inject NavigationManager NavManager
+
+<div class="row bg-light">
+    <table class="table table-bordered">
+        <colgroup>
+            @if (string.IsNullOrEmpty(channel))
+            {
+            <col style="width:10%">
+            }
+            <col style="width:10%">
+            <col style="width:60%">
+            <col style="width:30%">
+        </colgroup>
+        <thead class="thead-dark">
+            <tr>
+                @if (string.IsNullOrEmpty(channel))
+                {
+                <th>Channel</th>
+                }
+                <th>Username</th>
+                <th>Message</th>
+                <th>Links</th>
+            </tr>
+        </thead>
+        <tbody>
+            @if (entries.Any())
+            {
+                @foreach (var entry in entries)
+                {
+                    <tr title="@entry.Id">
+                        @if (string.IsNullOrEmpty(channel))
+                        {
+                            <td>@entry.ChannelName</td>
+                        }
+                        <td>@entry.Username</td>
+                        <td><a href="@entry.MessageLink">@entry.Message</a></td>
+                        <td>
+                            @foreach (var link in GetLinks(entry.ChannelName, entry.Message))
+                            {
+                                <a href="@link.Value" target="_blank"> @link.Key</a>
+                            }
+                        </td>
+                    </tr>
+                }
+            }
+            else
+            {
+            <tr><td colspan="6"><strong>No entries available</strong></td></tr>
+            }
+        </tbody>
+    </table>
+</div>
+
+@code {
+
+    List<DiscordEntry> entries = new List<DiscordEntry>();
+    string channel = "";
+
+    protected override async Task OnInitializedAsync()
+    {
+        GetQueryStringValues();
+        NavManager.LocationChanged += HandleLocationChanged;
+        await RefreshDiscordEntries();
+    }
+
+    async void HandleLocationChanged(object sender, LocationChangedEventArgs e)
+    {
+        GetQueryStringValues();
+        await RefreshDiscordEntries();
+        StateHasChanged();
+    }
+
+    void GetQueryStringValues()
+    {
+        var uri = NavManager.ToAbsoluteUri(NavManager.Uri);
+        if (QueryHelpers.ParseQuery(uri.Query).TryGetValue("channel", out var _channel))
+        {
+            channel = Convert.ToString(_channel);
+        }
+    }
+
+    private async Task RefreshDiscordEntries()
+    {
+        entries = await service.GetDiscordEntriesByChannelAsync(channel);
+    }
+
+    public void Dispose()
+    {
+        NavManager.LocationChanged -= HandleLocationChanged;
+    }
+
+    public Dictionary<string, string> GetLinks(string channelName, string message)
+    {
+        var result = new Dictionary<string, string>();
+
+        if (channelName.ToLower().Contains("book"))
+        {
+            result.Add("google", "https://www.google.co.il/search?tbm=bks&hl=en&q=" + HttpUtility.UrlEncode(message));
+            result.Add("amazon", "https://www.amazon.com/s?i=stripbooks-intl-ship&k=" + HttpUtility.UrlEncode(message));
+            result.Add("libgen", "http://gen.lib.rus.ec/search.php?req=" + HttpUtility.UrlEncode(message));
+            result.Add("zlibrary", "https://b-ok.asia/s/?q=" + HttpUtility.UrlEncode(message));
+        }
+        if (channelName.ToLower().Contains("movie"))
+        {
+            result.Add("imdb", "https://www.imdb.com/find?q=" + HttpUtility.UrlEncode(message));
+        }
+        if (channelName.ToLower().Contains("tv") || channelName.ToLower().Contains("show"))
+        {
+            result.Add("tvdb", "https://thetvdb.com/search?query=" + HttpUtility.UrlEncode(message));
+        }
+
+        return result;
+    }
+}
